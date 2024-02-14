@@ -3,6 +3,8 @@ import {
   DOUBLE_WORD_POSITIONS,
   TRIPLE_LETTER_POSITIONS,
   TRIPLE_WORD_POSITIONS,
+  WORDFEUD_BOARD_HEIGHT,
+  WORDFEUD_BOARD_WIDTH,
 } from "@/consts";
 import searchWord from "@/lib/words";
 import { Letter } from "@/types";
@@ -62,15 +64,15 @@ export async function getScoreForMove(
 
   if (
     Object.values(fixedLetters).length === 0 &&
-    getIdx({ x: 7, y: 7 }) in letters
+    !(getIdx({ x: 7, y: 7 }) in letters)
   ) {
     return { type: "error", reason: BoardScoreError.FirstMoveMustCoverCenter };
   }
 
   const seenVertical = new Set<number>();
   const seenHorizontal = new Set<number>();
-  const hasBeenUsed = new Set<number>();
   let someWordHasAllLetters = false;
+  let connected = false;
 
   const words: {
     word: { letter: Letter; multiplier: number }[];
@@ -105,13 +107,11 @@ export async function getScoreForMove(
 
       let currentWord: { letter: Letter; multiplier: number }[] = [];
       let wordMultiplier = 1;
-      let hasGoneThroughFixedLetter = false;
       const currentHasBeenUsed = [];
 
       for (let i = startPos; i < 15; i++) {
-        const curIdx = isVertical
-          ? getIdx({ x: pos.x, y: i })
-          : getIdx({ x: i, y: pos.y });
+        const curPos = isVertical ? { x: pos.x, y: i } : { x: i, y: pos.y };
+        const curIdx = getIdx(curPos);
         const letter = letters[curIdx];
         const fixedLetter = fixedLetters[curIdx];
 
@@ -126,6 +126,35 @@ export async function getScoreForMove(
 
           if (DOUBLE_WORD_POSITIONS.has(curIdx)) {
             wordMultiplier *= 2;
+          }
+
+          for (let xDir = -1; xDir <= 1; xDir += 1) {
+            for (let yDir = -1; yDir <= 1; yDir += 1) {
+              if (xDir === 0 && yDir === 0) {
+                continue;
+              }
+
+              const x = curPos.x + xDir;
+              const y = curPos.y + yDir;
+
+              if (
+                x < 0 ||
+                x >= WORDFEUD_BOARD_WIDTH ||
+                y < 0 ||
+                y >= WORDFEUD_BOARD_HEIGHT
+              ) {
+                continue;
+              }
+
+              const newIdx = getIdx({
+                x,
+                y,
+              });
+
+              if (newIdx in fixedLetters) {
+                connected = true;
+              }
+            }
           }
 
           currentWord.push({
@@ -151,7 +180,6 @@ export async function getScoreForMove(
 
         if (fixedLetter) {
           currentWord.push({ letter: fixedLetter, multiplier: 1 });
-          hasGoneThroughFixedLetter = true;
           continue;
         }
 
@@ -160,10 +188,6 @@ export async function getScoreForMove(
 
       if (currentWord.length <= 1) {
         continue;
-      }
-
-      if (hasGoneThroughFixedLetter) {
-        currentHasBeenUsed.forEach((v) => hasBeenUsed.add(v));
       }
 
       const idxsInWord = currentHasBeenUsed.filter(
@@ -185,12 +209,7 @@ export async function getScoreForMove(
     }
   }
 
-  if (
-    Object.keys(letters)
-      .map(Number)
-      .some((v) => !hasBeenUsed.has(v)) &&
-    Object.keys(fixedLetters).length !== 0
-  ) {
+  if (!connected && Object.keys(fixedLetters).length > 0) {
     return { type: "error", reason: BoardScoreError.WordsNotConnected };
   }
 
@@ -205,14 +224,13 @@ export async function getScoreForMove(
       .map((word) => word.word.map((l) => l.letter).join(""))
       .some((word) => !awaitedSearchWord(word))
   ) {
-    // WARNING: Reenable this
-    // return {
-    //   type: "error",
-    //   reason: BoardScoreError.WordsNotInDictionary,
-    //   wordsAffected: words
-    //     .map((word) => word.word.map((l) => l.letter).join(""))
-    //     .filter((word) => !awaitedSearchWord(word)),
-    // };
+    return {
+      type: "error",
+      reason: BoardScoreError.WordsNotInDictionary,
+      wordsAffected: words
+        .map((word) => word.word.map((l) => l.letter).join(""))
+        .filter((word) => !awaitedSearchWord(word)),
+    };
   }
 
   return {
