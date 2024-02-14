@@ -89,7 +89,7 @@ function Game(props: GameProps) {
   });
 
   useEffect(() => {
-    const socket = io(API_URL);
+    const socket = io(API_URL || undefined);
     socket.on("update", (id) => {
       if (id === props.id) {
         refetch();
