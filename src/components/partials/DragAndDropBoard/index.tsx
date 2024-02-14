@@ -53,15 +53,33 @@ function DragAndDropBoard(props: DragAndDropBoardProps) {
         onMouseOut={() => {
           ctx.setIsHoveringBoard(false);
         }}
-        onMouseDown={() => {
+        onMouseDown={(e) => {
           if (!ctx.enabled) return;
 
-          if (mouseTile && ctx.letters[getIdx(mouseTile)]) {
+          if (e.button === 0 && mouseTile && ctx.letters[getIdx(mouseTile)]) {
             ctx.setMove({
               from: mouseTile,
               letter: ctx.letters[getIdx(mouseTile)],
             });
           }
+
+          if (e.button === 2) {
+            if (ctx.move == null && mouseTile) {
+              const idx = getIdx(mouseTile);
+
+              if (idx in ctx.letters) {
+                ctx.onMove({
+                  type: "oob",
+                  from: mouseTile,
+                  letter: ctx.letters[idx],
+                });
+              }
+              return;
+            }
+          }
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
         }}
         onMouseUp={() => {
           if (!ctx.enabled) return;

@@ -2,7 +2,7 @@ import Tile from "@/components/ui/Tile";
 import { WORDFEUD_BOARD_HEIGHT, WORDFEUD_BOARD_WIDTH } from "@/consts";
 import { Letter, Nullable, Position } from "@/types";
 import cx from "@/utils/cx";
-import { getIdx } from "@/utils/idx";
+import { fromIdx, getIdx } from "@/utils/idx";
 import React from "react";
 
 import classes from "./Board.module.scss";
@@ -18,12 +18,7 @@ function Board(props: BoardProps) {
 
   const tiles = new Array(WORDFEUD_BOARD_WIDTH * WORDFEUD_BOARD_HEIGHT)
     .fill(0)
-    .map(
-      (_, i): Position => ({
-        x: i % 15,
-        y: ~~(i / 15),
-      }),
-    );
+    .map((_, i) => fromIdx(i));
 
   return (
     <div

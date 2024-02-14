@@ -2,7 +2,8 @@ async function createWordSearch() {
   const raw = await fetch("/words.txt").then((res) => res.text());
   const words = raw
     .split("\n")
-    .map((word) => word.trim())
+    .map((word) => word.trim().toUpperCase())
+    .filter((word) => word.length !== 1)
     .sort();
 
   return (search: string) => {
