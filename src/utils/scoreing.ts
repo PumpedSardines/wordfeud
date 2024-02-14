@@ -40,6 +40,7 @@ export const enum BoardScoreError {
   FirstMoveMustCoverCenter = 2,
   WordsNotConnected = 3,
   WordsNotInDictionary = 4,
+  LettersNotOnSameLine = 5,
 }
 
 export function getScoreForMove(
@@ -62,29 +63,34 @@ export function getScoreForMove(
   const seenVertical = new Set<number>();
   const seenHorizontal = new Set<number>();
   const hasBeenUsed = new Set<number>();
+  let someWordHasAllLetters = false;
 
   const words: {
     word: { letter: Letter; multiplier: number }[];
-    hasGoneThroughFixedLetter: boolean;
     multiplier: number;
   }[] = [];
 
   for (const type of ["vertical", "horizontal"]) {
+    const isVertical = type === "vertical";
+
     for (const idx of Object.keys(letters).map(Number)) {
-      if (type === "vertical" && seenVertical.has(idx)) {
+      if (isVertical && seenVertical.has(idx)) {
         continue;
       }
-      if (type === "horizontal" && seenHorizontal.has(idx)) {
+      if (!isVertical && seenHorizontal.has(idx)) {
         continue;
       }
 
       const pos = fromIdx(idx);
-      let startPos = type === "vertical" ? pos.y : pos.x;
+      let startPos = isVertical ? pos.y : pos.x;
 
-      while (startX > 0) {
-        const currIdx = getIdx({ x: startX - 1, y: pos.y });
+      while (startPos > 0) {
+        const currIdx = isVertical
+          ? getIdx({ x: pos.x, y: startPos - 1 })
+          : getIdx({ x: startPos - 1, y: pos.y });
+
         if (currIdx in fixedLetters || currIdx in letters) {
-          startX--;
+          startPos--;
         } else {
           break;
         }
@@ -95,8 +101,10 @@ export function getScoreForMove(
       let hasGoneThroughFixedLetter = false;
       const currentHasBeenUsed = [];
 
-      for (let i = startX; i < 15; i++) {
-        const curIdx = getIdx({ x: i, y: pos.y });
+      for (let i = startPos; i < 15; i++) {
+        const curIdx = isVertical
+          ? getIdx({ x: pos.x, y: i })
+          : getIdx({ x: i, y: pos.y });
         const letter = letters[curIdx];
         const fixedLetter = fixedLetters[curIdx];
 
@@ -108,7 +116,11 @@ export function getScoreForMove(
           // TODO: Add letter multiplier
           // TODO: Add word multiplier
           currentWord.push({ letter, multiplier: 1 });
-          seenHorizontal.add(curIdx);
+          if (isVertical) {
+            seenVertical.add(curIdx);
+          } else {
+            seenHorizontal.add(curIdx);
+          }
           currentHasBeenUsed.push(curIdx);
           continue;
         }
@@ -126,11 +138,24 @@ export function getScoreForMove(
         continue;
       }
 
-      currentHasBeenUsed.forEach((v) => hasBeenUsed.add(v));
+      if (hasGoneThroughFixedLetter) {
+        currentHasBeenUsed.forEach((v) => hasBeenUsed.add(v));
+      }
+
+      const idxsInWord = currentHasBeenUsed.filter(
+        (idx) => !(idx in fixedLetters),
+      );
+
+      if (
+        Object.keys(letters)
+          .map(Number)
+          .every((v) => idxsInWord.includes(v))
+      ) {
+        someWordHasAllLetters = true;
+      }
 
       words.push({
         word: currentWord,
-        hasGoneThroughFixedLetter,
         multiplier: wordMultiplier,
       });
     }
@@ -144,8 +169,8 @@ export function getScoreForMove(
     return { type: "error", reason: BoardScoreError.WordsNotConnected };
   }
 
-  if (words.some((word) => !word.hasGoneThroughFixedLetter)) {
-    return { type: "error", reason: BoardScoreError.WordsNotConnected };
+  if (!someWordHasAllLetters) {
+    return { type: "error", reason: BoardScoreError.LettersNotOnSameLine };
   }
 
   if (
