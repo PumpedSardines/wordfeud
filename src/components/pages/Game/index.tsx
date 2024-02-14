@@ -13,6 +13,8 @@ import classes from "./Game.module.scss";
 import { MoveType } from "@/components/partials/DragAndDropBoard/context";
 import shuffle from "@/utils/shuffle";
 import { BoardScoreError, getScoreForMove } from "@/utils/scoreing";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/api";
 
 const TILE_WIDTH = 45;
 
@@ -22,21 +24,56 @@ type GameProps = {
 };
 
 function Game(props: GameProps) {
-  const [fixedLetters, setFixedLetters] = useState<Record<number, Letter>>({});
+  const [enabled, setEnabled] = useState(false);
+  const [currentPlayer, setCurrentPlayer] = useState<"1" | "2" | null>(null);
+  const [lettersOnHand, setLettersOnHand] = useState<
+    { letter: Letter; index: number }[]
+  >(new Array(7).fill(0).map((_, i) => ({ letter: randomLetter(), index: i })));
 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const dndbpr = useRef<DragAndDropBoardProviderRef>(null);
 
-  const [lettersOnHand, setLettersOnHand] = useState<
-    { letter: Letter; index: number }[]
-  >(new Array(7).fill(0).map((_, i) => ({ letter: randomLetter(), index: i })));
-
   const [lettersOnBoard, setLettersOnBoard] = useState<Record<number, Letter>>(
     {},
   );
   const [letterOnHandMoving, setLetterOnHandMoving] = useState<number | null>();
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["game", props.id],
+    queryFn: async () => {
+      const game = await api().getGame(props.id);
+
+      if (currentPlayer === null || game.currentTurn !== currentPlayer) {
+        setLettersOnHand(
+          game.players[props.player].letters.map((l, i) => ({
+            letter: l,
+            index: i,
+          })),
+        );
+        setLettersOnBoard([]);
+        setCurrentPlayer(game.currentTurn);
+      }
+
+      if (game.currentTurn !== props.player) {
+        setEnabled(false);
+        setSuccessMessage("Waiting for the other player to make a move");
+      } else {
+        setEnabled(true);
+        setSuccessMessage(null);
+      }
+
+      return {
+        fixedLetters: game.letters,
+        scores: {
+          you: game.players[props.player].score,
+          them: game.players[props.player === "1" ? "2" : "1"].score,
+        },
+      };
+    },
+    refetchInterval: 10000,
+  });
 
   useEffect(() => {
     setError(null);
@@ -44,6 +81,7 @@ function Game(props: GameProps) {
 
   const handleMove = useCallback(
     (move: MoveType) => {
+      console.log(move);
       switch (move.type) {
         case "place":
           if (letterOnHandMoving === null && move.from != null) {
@@ -98,12 +136,19 @@ function Game(props: GameProps) {
     [lettersOnBoard, letterOnHandMoving, lettersOnHand],
   );
 
+  if (isLoading || isError) {
+    return <h1>Loading...</h1>;
+  }
+
+  const { fixedLetters, scores } = data!;
+
   return (
     <DragAndDropBoardProvider
       ref={dndbpr}
       className={classes.container}
       letters={lettersOnBoard}
       onMove={handleMove}
+      enabled={enabled}
     >
       <div className={classes.wrapper}>
         <p
@@ -123,6 +168,7 @@ function Game(props: GameProps) {
           <DragAndDropBoard fixedLetters={fixedLetters} />
         </div>
         <StatusBar
+          scores={scores}
           error={error}
           onClickShuffle={() => {
             const newLettersOnHand = shuffle(lettersOnHand).map((v, i) => ({
@@ -132,8 +178,8 @@ function Game(props: GameProps) {
 
             setLettersOnHand(newLettersOnHand);
           }}
-          onClickPlay={() => {
-            const res = getScoreForMove(lettersOnBoard, fixedLetters);
+          onClickPlay={async () => {
+            const res = await getScoreForMove(lettersOnBoard, fixedLetters);
             if (res.type === "error") {
               switch (res.reason) {
                 case BoardScoreError.NoLettersPlaced:
@@ -154,6 +200,15 @@ function Game(props: GameProps) {
               }
               return;
             }
+
+            await api()
+              .makeMove(props.id, {
+                player: props.player,
+                letters: lettersOnBoard,
+                score: res.score,
+                lettersOnHand: lettersOnHand.map((l) => l.letter),
+              })
+              .then(() => refetch());
           }}
         >
           <div
@@ -172,6 +227,8 @@ function Game(props: GameProps) {
                     width: TILE_WIDTH,
                   }}
                   onMouseDown={() => {
+                    if (!enabled) return;
+
                     if (dndbpr.current && curSpot) {
                       const { letter, index } = curSpot;
 
@@ -207,6 +264,10 @@ function Game(props: GameProps) {
 type StatusBarProps = {
   children: React.ReactNode;
   error: string | null;
+  scores: {
+    you: number;
+    them: number;
+  };
   onClickShuffle?: () => void;
   onClickPlay?: () => void;
 };
@@ -219,8 +280,8 @@ function StatusBar(props: StatusBarProps) {
       }}
     >
       <div className={classes.scoreBar} style={{ height: TILE_WIDTH + 10 }}>
-        <p>You: 0</p>
-        <p>Them: 0</p>
+        <p>You: {props.scores.you}</p>
+        <p>Them: {props.scores.them}</p>
       </div>
       {props.children}
       <button style={{ height: TILE_WIDTH }} onClick={props.onClickShuffle}>

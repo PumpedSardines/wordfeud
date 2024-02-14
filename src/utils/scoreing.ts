@@ -49,12 +49,13 @@ export const enum BoardScoreError {
   LettersNotOnSameLine = 5,
 }
 
-export function getScoreForMove(
+export async function getScoreForMove(
   letters: Record<number, Letter>,
   fixedLetters: Record<number, Letter>,
-):
+): Promise<
   | { type: "score"; score: number; words: string[] }
-  | { type: "error"; reason: BoardScoreError; wordsAffected?: string[] } {
+  | { type: "error"; reason: BoardScoreError; wordsAffected?: string[] }
+> {
   if (Object.values(letters).length === 0) {
     return { type: "error", reason: BoardScoreError.NoLettersPlaced };
   }
@@ -197,17 +198,19 @@ export function getScoreForMove(
     return { type: "error", reason: BoardScoreError.LettersNotOnSameLine };
   }
 
+  const awaitedSearchWord = await searchWord;
+
   if (
     words
       .map((word) => word.word.map((l) => l.letter).join(""))
-      .some((word) => !searchWord(word))
+      .some((word) => !awaitedSearchWord(word))
   ) {
     return {
       type: "error",
       reason: BoardScoreError.WordsNotInDictionary,
       wordsAffected: words
         .map((word) => word.word.map((l) => l.letter).join(""))
-        .filter((word) => !searchWord(word)),
+        .filter((word) => !awaitedSearchWord(word)),
     };
   }
 

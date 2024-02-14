@@ -14,3 +14,5 @@ export const DOUBLE_LETTER_POSITIONS = new Set([
   3, 11, 36, 38, 45, 52, 59, 92, 96, 98, 102, 108, 116, 122, 126, 128, 132, 165,
   172, 179, 186, 188, 213, 221,
 ]);
+
+export const API_URL = "";

@@ -26,6 +26,6 @@ async function createWordSearch() {
   };
 }
 
-const searchWord = await createWordSearch();
+const searchWord = createWordSearch();
 
 export default searchWord;

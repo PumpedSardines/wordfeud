@@ -143,7 +143,7 @@ const DragAndDropBoardProvider = React.forwardRef(
     props: DragAndDropBoardProviderProps,
     forwardRef: React.Ref<DragAndDropBoardProviderRef>,
   ) {
-    const { children, letters, onMove, ...rest } = props;
+    const { children, letters, onMove, enabled, ...rest } = props;
 
     const [tileWidth, setTileWidth] = useState(0);
     const [move, setMove] = useState<Nullable<Move>>(null);
@@ -165,7 +165,7 @@ const DragAndDropBoardProvider = React.forwardRef(
     return (
       <DragAndDropContext.Provider
         value={{
-          enabled: props.enabled ?? true,
+          enabled: enabled ?? true,
           tileWidth,
           setTileWidth,
           letters,
