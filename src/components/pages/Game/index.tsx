@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import DragAndDropBoard, {
   DragAndDropBoardProvider,
   DragAndDropBoardProviderRef,
@@ -12,23 +12,20 @@ import randomLetter from "@/utils/randomLetter";
 import classes from "./Game.module.scss";
 import { MoveType } from "@/components/partials/DragAndDropBoard/context";
 import shuffle from "@/utils/shuffle";
-import { getScoreForMove } from "@/utils/scoreing";
+import { BoardScoreError, getScoreForMove } from "@/utils/scoreing";
 
-const TILE_WIDTH = 50;
+const TILE_WIDTH = 45;
 
-function Game() {
-  const [fixedLetters, setFixedLetters] = useState<Record<number, Letter>>({
-    [getIdx({ x: 6, y: 7 })]: "W",
-    [getIdx({ x: 7, y: 7 })]: "E",
-    [getIdx({ x: 8, y: 7 })]: "S",
-    [getIdx({ x: 9, y: 7 })]: "T",
+type GameProps = {
+  id: string;
+  player: "1" | "2";
+};
 
-    [getIdx({ x: 9, y: 4 })]: "N",
-    [getIdx({ x: 9, y: 5 })]: "O",
-    [getIdx({ x: 9, y: 6 })]: "R",
-    [getIdx({ x: 9, y: 7 })]: "T",
-    [getIdx({ x: 9, y: 8 })]: "H",
-  });
+function Game(props: GameProps) {
+  const [fixedLetters, setFixedLetters] = useState<Record<number, Letter>>({});
+
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const dndbpr = useRef<DragAndDropBoardProviderRef>(null);
 
@@ -40,6 +37,10 @@ function Game() {
     {},
   );
   const [letterOnHandMoving, setLetterOnHandMoving] = useState<number | null>();
+
+  useEffect(() => {
+    setError(null);
+  }, [lettersOnBoard, lettersOnHand]);
 
   const handleMove = useCallback(
     (move: MoveType) => {
@@ -105,6 +106,14 @@ function Game() {
       onMove={handleMove}
     >
       <div className={classes.wrapper}>
+        <p
+          style={{
+            width: TILE_WIDTH * WORDFEUD_BOARD_WIDTH + 14,
+          }}
+          className={classes.successMessage}
+        >
+          {successMessage}
+        </p>
         <div
           style={{
             width: TILE_WIDTH * WORDFEUD_BOARD_WIDTH + 14,
@@ -114,6 +123,7 @@ function Game() {
           <DragAndDropBoard fixedLetters={fixedLetters} />
         </div>
         <StatusBar
+          error={error}
           onClickShuffle={() => {
             const newLettersOnHand = shuffle(lettersOnHand).map((v, i) => ({
               ...v,
@@ -123,7 +133,27 @@ function Game() {
             setLettersOnHand(newLettersOnHand);
           }}
           onClickPlay={() => {
-            console.log(getScoreForMove(lettersOnBoard, fixedLetters));
+            const res = getScoreForMove(lettersOnBoard, fixedLetters);
+            if (res.type === "error") {
+              switch (res.reason) {
+                case BoardScoreError.NoLettersPlaced:
+                  setError("You need to place some letters");
+                  break;
+                case BoardScoreError.FirstMoveMustCoverCenter:
+                  setError("First move must cover the center tile");
+                  break;
+                case BoardScoreError.WordsNotConnected:
+                  setError("Words must be connected to words placed before");
+                  break;
+                case BoardScoreError.WordsNotInDictionary:
+                  setError(`"${res.wordsAffected?.[0]}" is not a valid word`);
+                  break;
+                case BoardScoreError.LettersNotOnSameLine:
+                  setError("Letters must be placed on the same line");
+                  break;
+              }
+              return;
+            }
           }}
         >
           <div
@@ -161,6 +191,14 @@ function Game() {
             })}
           </div>
         </StatusBar>
+        <p
+          style={{
+            width: TILE_WIDTH * WORDFEUD_BOARD_WIDTH + 14,
+          }}
+          className={classes.errorMessage}
+        >
+          {error}
+        </p>
       </div>
     </DragAndDropBoardProvider>
   );
@@ -168,6 +206,7 @@ function Game() {
 
 type StatusBarProps = {
   children: React.ReactNode;
+  error: string | null;
   onClickShuffle?: () => void;
   onClickPlay?: () => void;
 };
@@ -188,6 +227,7 @@ function StatusBar(props: StatusBarProps) {
         <p>Shuffle</p>
       </button>
       <button
+        disabled={props.error != null}
         style={{ height: TILE_WIDTH }}
         className={classes.play}
         onClick={props.onClickPlay}

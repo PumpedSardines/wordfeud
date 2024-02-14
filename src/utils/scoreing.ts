@@ -1,3 +1,9 @@
+import {
+  DOUBLE_LETTER_POSITIONS,
+  DOUBLE_WORD_POSITIONS,
+  TRIPLE_LETTER_POSITIONS,
+  TRIPLE_WORD_POSITIONS,
+} from "@/consts";
 import searchWord from "@/lib/words";
 import { Letter } from "@/types";
 import { fromIdx, getIdx } from "./idx";
@@ -54,7 +60,7 @@ export function getScoreForMove(
   }
 
   if (
-    Object.values(fixedLetters).length === 0 &&
+    Object.values(letters).length === 0 &&
     getIdx({ x: 7, y: 7 }) in letters
   ) {
     return { type: "error", reason: BoardScoreError.FirstMoveMustCoverCenter };
@@ -96,7 +102,7 @@ export function getScoreForMove(
         }
       }
 
-      let currentWord: { letter: Letter; multiplier: 1 }[] = [];
+      let currentWord: { letter: Letter; multiplier: number }[] = [];
       let wordMultiplier = 1;
       let hasGoneThroughFixedLetter = false;
       const currentHasBeenUsed = [];
@@ -113,9 +119,26 @@ export function getScoreForMove(
         }
 
         if (letter) {
-          // TODO: Add letter multiplier
-          // TODO: Add word multiplier
-          currentWord.push({ letter, multiplier: 1 });
+          if (TRIPLE_WORD_POSITIONS.has(curIdx)) {
+            wordMultiplier *= 3;
+          }
+
+          if (DOUBLE_WORD_POSITIONS.has(curIdx)) {
+            wordMultiplier *= 2;
+          }
+
+          currentWord.push({
+            letter,
+            multiplier: (() => {
+              if (TRIPLE_LETTER_POSITIONS.has(curIdx)) {
+                return 3;
+              } else if (DOUBLE_LETTER_POSITIONS.has(curIdx)) {
+                return 2;
+              }
+
+              return 1;
+            })(),
+          });
           if (isVertical) {
             seenVertical.add(curIdx);
           } else {
@@ -164,7 +187,8 @@ export function getScoreForMove(
   if (
     Object.keys(letters)
       .map(Number)
-      .some((v) => !hasBeenUsed.has(v))
+      .some((v) => !hasBeenUsed.has(v)) &&
+    Object.keys(fixedLetters).length !== 0
   ) {
     return { type: "error", reason: BoardScoreError.WordsNotConnected };
   }
@@ -176,13 +200,15 @@ export function getScoreForMove(
   if (
     words
       .map((word) => word.word.map((l) => l.letter).join(""))
-      .map((word) => {
-        console.log(word);
-        return word;
-      })
       .some((word) => !searchWord(word))
   ) {
-    return { type: "error", reason: BoardScoreError.WordsNotInDictionary };
+    return {
+      type: "error",
+      reason: BoardScoreError.WordsNotInDictionary,
+      wordsAffected: words
+        .map((word) => word.word.map((l) => l.letter).join(""))
+        .filter((word) => !searchWord(word)),
+    };
   }
 
   return {

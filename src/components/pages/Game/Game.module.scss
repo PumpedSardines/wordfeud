@@ -25,7 +25,26 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 5px;
+}
+
+.errorMessage {
+  margin: 0;
+  height: 1rem;
+  margin-top: 10px;
+  text-align: center;
+  color: var(--text);
+  font-family: Lato, sans-serif;
+}
+
+.successMessage {
+  margin: 0;
+  height: 1rem;
+  margin-bottom: 10px;
+  text-align: center;
+  vertical-align: bottom;
+  color: var(--text);
+  font-family: Lato, sans-serif;
 }
 
 .statusBar {
@@ -36,7 +55,7 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   width: 100%;
   background-color: var(--background-secondary);
   border-radius: 5px;
@@ -59,7 +78,7 @@
 
     p {
       all: unset;
-      font-size: 1rem;
+      font-size: 0.85rem;
       font-family: Lato, sans-serif;
     }
   }
@@ -88,6 +107,19 @@
 
       &:active {
         background-color: var(--cardinal-red);
+      }
+
+      &[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+
+        &:hover {
+          background-color: var(--cardinal-red);
+        }
+
+        &:active {
+          background-color: var(--cardinal-red);
+        }
       }
     }
 
