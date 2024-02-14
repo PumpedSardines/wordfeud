@@ -16,6 +16,15 @@ function App() {
     return newId;
   })();
 
+  if (gameId && !/[A-Za-z]+/.test(gameId)) {
+    return (
+      <ErrorPage
+        message="Invalid Game Id"
+        detail="The game id should only contain letters"
+      />
+    );
+  }
+
   if (gameId && validPlayer) {
     return <Game id={gameId} player={player} playerId={playerId} />;
   }

@@ -1,5 +1,6 @@
 const express = require("express");
-const fs = require("fs");
+const fs = require("fs").promises;
+const path = require("path");
 const clone = require("./utils/clone.js");
 const getRandomLetterPool = require("./utils/letterPool.js");
 
@@ -21,12 +22,21 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(express.static("public"));
 
+const gameMapRaw = fs
+  .readFile(path.join(__dirname, "../game_map.json"), "utf-8")
+  .catch(() => "[]");
+
 const games = new Map();
 
-app.get("/api/game/:game", (req, res) => {
+app.get("/api/game/:game", async (req, res) => {
   const gameId = req.params.game;
   const player = req.query.player;
   const auth = req.headers.authorization;
+
+  if (!/[A-Za-z]+/.test(gameId)) {
+    res.status(400).send("Invalid game ID");
+    return;
+  }
 
   if (player !== "1" && player !== "2") {
     res.status(400).send("Invalid player");
@@ -37,27 +47,36 @@ app.get("/api/game/:game", (req, res) => {
   const player1 = letterPool.splice(0, 7);
   const player2 = letterPool.splice(0, 7);
 
-  if (!games.has(gameId)) {
-    const game = {
-      letters: {},
-      lastPlayed: null,
-      currentTurn: "1",
-      letterPool,
-      players: {
-        ["1"]: {
-          score: 0,
-          letters: player1,
-          auth: null,
-        },
-        ["2"]: {
-          score: 0,
-          letters: player2,
-          auth: null,
-        },
-      },
-    };
+  const gameMap = JSON.parse(await gameMapRaw);
 
-    games.set(gameId, game);
+  if (!games.has(gameId)) {
+    if (gameMap.includes(gameId)) {
+      const game = JSON.parse(
+        await fs.readFile(path.join(__dirname, "../games", `${gameId}.json`)),
+      );
+      games.set(gameId, game);
+    } else {
+      const game = {
+        letters: {},
+        lastPlayed: null,
+        currentTurn: "1",
+        letterPool,
+        players: {
+          ["1"]: {
+            score: 0,
+            letters: player1,
+            auth: null,
+          },
+          ["2"]: {
+            score: 0,
+            letters: player2,
+            auth: null,
+          },
+        },
+      };
+
+      await storeGame(gameId, game);
+    }
   }
 
   {
@@ -69,7 +88,7 @@ app.get("/api/game/:game", (req, res) => {
       game.players["2"].auth = game.players["2"].auth ?? auth;
     }
 
-    games.set(gameId, game);
+    await storeGame(gameId, game);
   }
 
   const game = clone(games.get(gameId));
@@ -92,7 +111,6 @@ app.get("/api/game/:game", (req, res) => {
       authenticated = true;
     }
   }
-  console.log(game);
 
   delete game.letterPool;
   delete game.players["1"].auth;
@@ -103,8 +121,14 @@ app.get("/api/game/:game", (req, res) => {
   res.send(game);
 });
 
-app.post("/api/game/:game", (req, res) => {
+app.post("/api/game/:game", async (req, res) => {
   const gameId = req.params.game;
+
+  if (!/[A-Za-z]+/.test(gameId)) {
+    res.status(400).send("Invalid game ID");
+    return;
+  }
+
   const { player, letters, score, lettersOnHand } = req.body;
   const auth = req.headers.authorization;
 
@@ -150,11 +174,27 @@ app.post("/api/game/:game", (req, res) => {
     game.letterPool.push(...getRandomLetterPool());
   }
 
-  games.set(gameId, game);
   io.emit("update", gameId);
-
   res.sendStatus(200);
+
+  await storeGame(gameId, game);
 });
+
+async function storeGame(gameId, game) {
+  games.set(gameId, game);
+  const gameMap = JSON.parse(await gameMapRaw);
+
+  await Promise.all([
+    fs.writeFile(
+      path.join(__dirname, "../games", `${gameId}.json`),
+      JSON.stringify(game, null, 2),
+    ),
+    fs.writeFile(
+      path.join(__dirname, `../game_map.json`),
+      JSON.stringify([...new Set([...games.keys(), ...gameMap])], null, 2),
+    ),
+  ]);
+}
 
 (async () => {
   server.listen(PORT, "0.0.0.0");
