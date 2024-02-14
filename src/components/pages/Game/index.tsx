@@ -4,7 +4,7 @@ import DragAndDropBoard, {
   DragAndDropBoardProviderRef,
 } from "@/components/partials/DragAndDropBoard";
 import Tile from "@/components/ui/Tile";
-import { WORDFEUD_BOARD_WIDTH } from "@/consts";
+import { API_URL, WORDFEUD_BOARD_WIDTH } from "@/consts";
 import { Letter } from "@/types";
 import { getIdx } from "@/utils/idx";
 import randomLetter from "@/utils/randomLetter";
@@ -14,21 +14,28 @@ import { MoveType } from "@/components/partials/DragAndDropBoard/context";
 import shuffle from "@/utils/shuffle";
 import { BoardScoreError, getScoreForMove } from "@/utils/scoreing";
 import { useQuery } from "@tanstack/react-query";
-import api from "@/api";
+import getApi from "@/api";
+import ErrorPage from "../Error";
+import { io } from "socket.io-client";
 
 const TILE_WIDTH = 45;
 
 type GameProps = {
   id: string;
   player: "1" | "2";
+  playerId: string;
 };
 
 function Game(props: GameProps) {
   const [enabled, setEnabled] = useState(false);
+  const [spectator, setSpectator] = useState(false);
+
   const [currentPlayer, setCurrentPlayer] = useState<"1" | "2" | null>(null);
   const [lettersOnHand, setLettersOnHand] = useState<
     { letter: Letter; index: number }[]
   >(new Array(7).fill(0).map((_, i) => ({ letter: randomLetter(), index: i })));
+
+  const api = getApi({ auth: props.playerId, player: props.player });
 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,37 +50,53 @@ function Game(props: GameProps) {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["game", props.id],
     queryFn: async () => {
-      const game = await api().getGame(props.id);
+      const game = await api.getGame(props.id);
 
-      if (currentPlayer === null || game.currentTurn !== currentPlayer) {
-        setLettersOnHand(
-          game.players[props.player].letters.map((l, i) => ({
-            letter: l,
-            index: i,
-          })),
-        );
-        setLettersOnBoard([]);
-        setCurrentPlayer(game.currentTurn);
-      }
-
-      if (game.currentTurn !== props.player) {
+      if (!game.authenticated) {
+        setSpectator(true);
+        setSuccessMessage("You're in spectator mode");
         setEnabled(false);
-        setSuccessMessage("Waiting for the other player to make a move");
       } else {
-        setEnabled(true);
-        setSuccessMessage(null);
+        if (currentPlayer === null || game.currentTurn !== currentPlayer) {
+          setLettersOnHand(
+            game.players[props.player].letters.map((l, i) => ({
+              letter: l,
+              index: i,
+            })),
+          );
+          setLettersOnBoard([]);
+          setCurrentPlayer(game.currentTurn);
+        }
+
+        if (game.currentTurn !== props.player) {
+          setEnabled(false);
+          setSuccessMessage("Waiting for the other player to make a move");
+        } else {
+          setEnabled(true);
+          setSuccessMessage(null);
+        }
       }
 
       return {
         fixedLetters: game.letters,
+        lastPlayed: game.lastPlayed,
         scores: {
-          you: game.players[props.player].score,
-          them: game.players[props.player === "1" ? "2" : "1"].score,
+          playerOne: game.players["1"].score,
+          playerTwo: game.players["2"].score,
         },
       };
     },
-    refetchInterval: 10000,
   });
+
+  useEffect(() => {
+    const socket = io(API_URL);
+    socket.on("update", (id) => {
+      if (id === props.id) {
+        refetch();
+      }
+    });
+    return () => void socket.disconnect();
+  }, []);
 
   useEffect(() => {
     setError(null);
@@ -136,11 +159,25 @@ function Game(props: GameProps) {
     [lettersOnBoard, letterOnHandMoving, lettersOnHand],
   );
 
-  if (isLoading || isError) {
-    return <h1>Loading...</h1>;
+  if (isLoading) {
+    return (
+      <ErrorPage
+        message="Loading..."
+        detail="Fetching game data from the server"
+      />
+    );
   }
 
-  const { fixedLetters, scores } = data!;
+  if (isError) {
+    return (
+      <ErrorPage
+        message="Error"
+        detail="An error occurred while fetching game data from the server"
+      />
+    );
+  }
+
+  const { fixedLetters, scores, lastPlayed } = data!;
 
   return (
     <DragAndDropBoardProvider
@@ -165,11 +202,16 @@ function Game(props: GameProps) {
           }}
           className={classes.dndBoard}
         >
-          <DragAndDropBoard fixedLetters={fixedLetters} />
+          <DragAndDropBoard
+            highlight={lastPlayed}
+            fixedLetters={fixedLetters}
+          />
         </div>
         <StatusBar
+          player={props.player}
           scores={scores}
           error={error}
+          spectating={spectator}
           onClickShuffle={() => {
             const newLettersOnHand = shuffle(lettersOnHand).map((v, i) => ({
               ...v,
@@ -201,7 +243,7 @@ function Game(props: GameProps) {
               return;
             }
 
-            await api()
+            await api
               .makeMove(props.id, {
                 player: props.player,
                 letters: lettersOnBoard,
@@ -264,14 +306,21 @@ function Game(props: GameProps) {
 type StatusBarProps = {
   children: React.ReactNode;
   error: string | null;
+  spectating?: boolean;
+  player: "1" | "2";
   scores: {
-    you: number;
-    them: number;
+    playerOne: number;
+    playerTwo: number;
   };
   onClickShuffle?: () => void;
   onClickPlay?: () => void;
 };
 function StatusBar(props: StatusBarProps) {
+  const you =
+    props.player === "1" ? props.scores.playerOne : props.scores.playerTwo;
+  const them =
+    props.player === "1" ? props.scores.playerTwo : props.scores.playerOne;
+
   return (
     <div
       className={classes.statusBar}
@@ -280,21 +329,43 @@ function StatusBar(props: StatusBarProps) {
       }}
     >
       <div className={classes.scoreBar} style={{ height: TILE_WIDTH + 10 }}>
-        <p>You: {props.scores.you}</p>
-        <p>Them: {props.scores.them}</p>
+        {(() => {
+          if (props.spectating) {
+            return (
+              <>
+                <p>Player 1 - {props.scores.playerOne}</p>
+                <p>Player 2 - {props.scores.playerTwo}</p>
+              </>
+            );
+          } else {
+            return (
+              <>
+                <p>You - {you}</p>
+                <p>Them - {them}</p>
+              </>
+            );
+          }
+        })()}
       </div>
-      {props.children}
-      <button style={{ height: TILE_WIDTH }} onClick={props.onClickShuffle}>
-        <p>Shuffle</p>
-      </button>
-      <button
-        disabled={props.error != null}
-        style={{ height: TILE_WIDTH }}
-        className={classes.play}
-        onClick={props.onClickPlay}
+      <div
+        style={{
+          all: "inherit",
+          display: props.spectating ? "none" : undefined,
+        }}
       >
-        <p>Play</p>
-      </button>
+        {props.children}
+        <button style={{ height: TILE_WIDTH }} onClick={props.onClickShuffle}>
+          <p>Shuffle</p>
+        </button>
+        <button
+          disabled={props.error != null}
+          style={{ height: TILE_WIDTH }}
+          className={classes.play}
+          onClick={props.onClickPlay}
+        >
+          <p>Play</p>
+        </button>
+      </div>
     </div>
   );
 }

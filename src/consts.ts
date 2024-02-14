@@ -15,4 +15,4 @@ export const DOUBLE_LETTER_POSITIONS = new Set([
   172, 179, 186, 188, 213, 221,
 ]);
 
-export const API_URL = "";
+export const API_URL = "http://localhost:3000";

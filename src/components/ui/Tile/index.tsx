@@ -54,6 +54,7 @@ function Tile(props: TileProps) {
         props.className,
         className,
         props.grey && classes.grey,
+        props.highlight && classes.highlight,
       ])}
     >
       {text && <p>{text}</p>}

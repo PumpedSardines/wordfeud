@@ -14,10 +14,16 @@
   --cardinal-red: #b83d43;
   --cardinal-red-hover: #c1444a;
   --harvest-orange: #df9a2a;
+
+  --highlight: #faffcc;
 }
 
 body {
   padding: 0;
   margin: 0;
   font-size: 14px;
+  background-color: var(--background-tertiary);
+  color: var(--text);
+
+  font-family: Lato, sans-serif;
 }

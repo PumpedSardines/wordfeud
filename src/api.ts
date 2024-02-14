@@ -2,6 +2,7 @@ import { API_URL } from "./consts";
 import { Letter } from "./types";
 
 export type GameData = {
+  authenticated: boolean;
   letters: Record<number, string>;
   lastPlayed: number[];
   currentTurn: "1" | "2";
@@ -24,12 +25,18 @@ export type MakeMove = {
   lettersOnHand: Letter[];
 };
 
-function api() {
+function getApi(options: { auth: string; player: "1" | "2" }) {
+  const params = new URLSearchParams();
+  params.append("player", options.player);
+
   return {
     getGame: async (gameId: string) => {
-      const data = (await fetch(API_URL + `/api/game/${gameId}`).then((res) =>
-        res.json(),
-      )) as GameData;
+      const data = (await fetch(API_URL + `/api/game/${gameId}?${params}`, {
+        method: "GET",
+        headers: {
+          Authorization: options.auth,
+        },
+      }).then((res) => res.json())) as GameData;
 
       return {
         ...data,
@@ -42,10 +49,11 @@ function api() {
       };
     },
     makeMove: async (gameId: string, move: MakeMove) => {
-      await fetch(API_URL + `/api/game/${gameId}`, {
+      await fetch(API_URL + `/api/game/${gameId}?${params}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: options.auth,
         },
         body: JSON.stringify({
           ...move,
@@ -61,4 +69,4 @@ function api() {
   };
 }
 
-export default api;
+export default getApi;

@@ -17,6 +17,7 @@ import classes from "./DragAndDropBoard.module.scss";
 
 type DragAndDropBoardProps = {
   fixedLetters?: Nullable<Record<number, Letter>>;
+  highlight?: number[];
 };
 
 function DragAndDropBoard(props: DragAndDropBoardProps) {
@@ -45,6 +46,7 @@ function DragAndDropBoard(props: DragAndDropBoardProps) {
   return (
     <div ref={ref} style={{ width: "100%" }}>
       <Board
+        highlight={props.highlight}
         fixedLetters={props.fixedLetters}
         letters={showLetters}
         onMouseOver={() => {

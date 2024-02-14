@@ -11,6 +11,7 @@ type BoardProps = {
   fixedLetters?: Nullable<Record<number, Letter>>;
   letters?: Nullable<Record<number, Letter>>;
   onTileHover?: Nullable<(pos: Nullable<Position>) => void>;
+  highlight?: number[];
 } & React.HTMLAttributes<HTMLDivElement>;
 
 function Board(props: BoardProps) {
@@ -47,9 +48,18 @@ function Board(props: BoardProps) {
       {tiles.map((pos) => {
         const idx = getIdx(pos);
         const grey = !!(letters && idx in letters);
+        const highlight = props.highlight?.includes(idx);
         const letter = fixedLetters?.[idx] ?? letters?.[idx];
 
-        return <Tile key={idx} pos={pos} letter={letter} grey={grey} />;
+        return (
+          <Tile
+            key={idx}
+            pos={pos}
+            letter={letter}
+            grey={grey}
+            highlight={highlight}
+          />
+        );
       })}
     </div>
   );

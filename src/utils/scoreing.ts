@@ -61,7 +61,7 @@ export async function getScoreForMove(
   }
 
   if (
-    Object.values(letters).length === 0 &&
+    Object.values(fixedLetters).length === 0 &&
     getIdx({ x: 7, y: 7 }) in letters
   ) {
     return { type: "error", reason: BoardScoreError.FirstMoveMustCoverCenter };
@@ -205,13 +205,14 @@ export async function getScoreForMove(
       .map((word) => word.word.map((l) => l.letter).join(""))
       .some((word) => !awaitedSearchWord(word))
   ) {
-    return {
-      type: "error",
-      reason: BoardScoreError.WordsNotInDictionary,
-      wordsAffected: words
-        .map((word) => word.word.map((l) => l.letter).join(""))
-        .filter((word) => !awaitedSearchWord(word)),
-    };
+    // WARNING: Reenable this
+    // return {
+    //   type: "error",
+    //   reason: BoardScoreError.WordsNotInDictionary,
+    //   wordsAffected: words
+    //     .map((word) => word.word.map((l) => l.letter).join(""))
+    //     .filter((word) => !awaitedSearchWord(word)),
+    // };
   }
 
   return {

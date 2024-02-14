@@ -38,6 +38,11 @@
     color: var(--text-alt);
     font-size: 1.5rem;
 
+    &.highlight {
+      background-color: var(--highlight);
+      color: var(--text-alt);
+    }
+
     &.grey {
       background-color: var(--foreground-alt);
     }
