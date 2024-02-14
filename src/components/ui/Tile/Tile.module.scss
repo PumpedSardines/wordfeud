@@ -1,0 +1,61 @@
+.tile {
+  position: relative;
+  user-select: none;
+  pointer-events: none;
+
+  width: stretch;
+  aspect-ratio: 1 / 1;
+
+  border-radius: 3px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  p {
+    all: unset;
+
+    font-family: "Lato", sans-serif;
+    font-weight: 700;
+    font-style: normal;
+  }
+
+  // Needs to be here because otherwise .tile p takes precedence
+  .score {
+    position: absolute;
+
+    bottom: 3px;
+    right: 5px;
+    font-size: 0.75rem;
+  }
+
+  background-color: var(--background-alt);
+  color: var(--text);
+  font-size: 1rem;
+
+  &.letter {
+    background-color: var(--foreground);
+    color: var(--text-alt);
+    font-size: 1.5rem;
+
+    &.grey {
+      background-color: var(--foreground-alt);
+    }
+  }
+
+  &.doubleLetter {
+    background-color: var(--ocean-blue);
+  }
+
+  &.tripleLetter {
+    background-color: var(--forest-green);
+  }
+
+  &.doubleWord {
+    background-color: var(--cardinal-red);
+  }
+
+  &.tripleWord {
+    background-color: var(--harvest-orange);
+  }
+}

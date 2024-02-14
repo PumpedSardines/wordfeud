@@ -1,0 +1,12 @@
+.root {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  grid-template-rows: repeat(15, 1fr);
+  background-color: #111;
+  box-sizing: border-box;
+  border-radius: 3px;
+  gap: 1px;
+
+  aspect-ratio: 1 / 1;
+  width: 100%;
+}
