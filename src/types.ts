@@ -26,6 +26,7 @@ export type Letter =
   | "Y"
   | "Z";
 
+export type Player = "1" | "2";
 export type Nullable<T> = T | null | undefined;
 export type Position = { x: number; y: number };
 export const enum TileType {
