@@ -102,6 +102,7 @@ function Game(props: GameProps) {
           />
         </div>
         <StatusBar
+          enabled={enabled}
           player={props.player}
           scores={scores}
           error={error}
