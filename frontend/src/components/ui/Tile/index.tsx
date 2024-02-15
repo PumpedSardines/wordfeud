@@ -31,10 +31,6 @@ function Tile(props: TileProps) {
   const score = props.letter && getLetterScore(props.letter);
 
   const { text, className } = useMemo(() => {
-    if (props.letter) {
-      return { text: props.letter, className: classes.letter };
-    }
-
     if (!tileType) {
       return { text: null, className: null };
     }
@@ -53,12 +49,24 @@ function Tile(props: TileProps) {
         classes.tile,
         props.className,
         className,
-        props.grey && classes.grey,
         props.highlight && classes.highlight,
       ])}
     >
-      {text && <p>{text}</p>}
-      {score && <p className={classes.score}>{score}</p>}
+      {text && (props.letter ? null : <p>{text}</p>)}
+      {props.letter && (
+        <div
+          className={cx([
+            classes.letter,
+            props.grey && classes.grey,
+            props.highlight && classes.highlight,
+            className,
+          ])}
+        >
+          {text && <p className={classes.multiplier}>{text}</p>}
+          <p>{props.letter}</p>
+          {score && <p className={classes.score}>{score}</p>}
+        </div>
+      )}
     </div>
   );
 }
