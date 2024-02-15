@@ -1,4 +1,4 @@
-function shuffle(arr) {
+function shuffle<T>(arr: T[]): T[] {
   const result = JSON.parse(JSON.stringify(arr));
 
   for (let i = 0; i < result.length; i++) {
@@ -46,4 +46,4 @@ function getRandomLetterPool() {
   );
 }
 
-module.exports = getRandomLetterPool;
+export default getRandomLetterPool;

@@ -1,22 +1,23 @@
 import { API_URL } from "./consts";
 import { Letter } from "./types";
 
-export type GameData = {
-  authenticated: boolean;
-  letters: Record<number, string>;
-  lastPlayed: number[];
-  currentTurn: "1" | "2";
-  players: {
-    "1": {
-      letters: Letter[];
-      score: number;
-    };
-    "2": {
-      letters: Letter[];
-      score: number;
+export namespace Responses {
+  export type GetGame = {
+    authenticated: boolean;
+    letters: Record<number, Letter>;
+    prevPlayed: number[];
+    lettersOnHand: Letter[];
+    currentTurn: "1" | "2";
+    players: {
+      "1": {
+        score: number;
+      };
+      "2": {
+        score: number;
+      };
     };
   };
-};
+}
 
 export type MakeMove = {
   player: "1" | "2";
@@ -31,12 +32,15 @@ function getApi(options: { auth: string; player: "1" | "2" }) {
 
   return {
     getGame: async (gameId: string) => {
+      type GetGameRes = Responses.GetGame & { letters: Record<number, string> };
+
       const data = (await fetch(API_URL + `/api/game/${gameId}?${params}`, {
         method: "GET",
         headers: {
+          "X-Wordfeud-Name": "anonymous",
           Authorization: options.auth,
         },
-      }).then((res) => res.json())) as GameData;
+      }).then((res) => res.json())) as Responses.GetGame;
 
       return {
         ...data,
@@ -46,10 +50,10 @@ function getApi(options: { auth: string; player: "1" | "2" }) {
             value as Letter,
           ]),
         ),
-      };
+      } as GetGameRes;
     },
     makeMove: async (gameId: string, move: MakeMove) => {
-      await fetch(API_URL + `/api/game/${gameId}?${params}`, {
+      await fetch(API_URL + `/api/game/${gameId}/move?${params}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
