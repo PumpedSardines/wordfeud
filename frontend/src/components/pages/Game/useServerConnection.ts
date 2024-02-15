@@ -18,7 +18,7 @@ function useServerConnection(opts: ServerConnectionOpts) {
   const [currentTurn, setCurrentTurn] = useState<Player | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["game", opts.gameId],
+    queryKey: ["game", opts.gameId, opts.player, opts.playerId],
     queryFn: async () => {
       const game = await api.getGame(opts.gameId);
 
