@@ -1,13 +1,13 @@
-<center>
+<div align="center">
     <h1>Wordfeud</h1>
     <p>An online wordfeud website where you can play wordfeud with your friends.</p>
-</center>
+</div>
 
 ![A screenshot of the game](./assets/screenshot.png)
 
-<center>
+<div align="center">
     <p><i>A preview of how the game looks</i></p>
-</center>
+</div>
 
 ## Overview
 
