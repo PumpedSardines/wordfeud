@@ -61,7 +61,7 @@ function useServerConnection(opts: ServerConnectionOpts) {
   });
 
   useEffect(() => {
-    const socket = io(API_URL || undefined);
+    const socket = API_URL !== "" ? io(API_URL) : io();
     socket.on("update", (gameId) => {
       if (gameId === opts.gameId) {
         refetch();

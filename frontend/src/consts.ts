@@ -15,4 +15,6 @@ export const DOUBLE_LETTER_POSITIONS = new Set([
   172, 179, 186, 188, 213, 221,
 ]);
 
-export const API_URL = "http://localhost:3000";
+export const API_URL: string = import.meta.env.PROD
+  ? ""
+  : "http://localhost:3000";
