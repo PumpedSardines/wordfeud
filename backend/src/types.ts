@@ -2,7 +2,7 @@ export type Player = "1" | "2";
 
 export type Game = {
   /** The letter on the board, { [idx]: letter } */
-  letters: Record<string, string>;
+  letters: Record<string, Letter>;
   /** The last played letters idx's */
   prevPlayed: number[];
   currentTurn: Player;
@@ -26,9 +26,9 @@ type Letter = string;
 export namespace Responses {
   export type GetGame = {
     authenticated: boolean;
-    letters: Record<number, string>;
+    letters: Record<string, Letter>;
     prevPlayed: number[];
-    lettersOnHand: string[];
+    lettersOnHand: Letter[];
     currentTurn: "1" | "2";
     players: {
       "1": {

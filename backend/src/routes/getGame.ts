@@ -10,7 +10,7 @@ function getGameRoute(app: express.Application) {
     const db = await client();
 
     const gameId = req.params.game;
-    const name = req.headers["X-Wordfeud-Name"];
+    const name = req.headers["x-wordfeud-name"];
     const player = req.query["player"];
     const auth = req.headers.authorization;
 

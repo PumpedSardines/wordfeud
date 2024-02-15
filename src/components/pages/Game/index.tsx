@@ -59,7 +59,7 @@ function Game(props: GameProps) {
       } else {
         if (currentPlayer === null || game.currentTurn !== currentPlayer) {
           setLettersOnHand(
-            game.players[props.player].letters.map((l, i) => ({
+            game.lettersOnHand.map((l, i) => ({
               letter: l,
               index: i,
             })),
@@ -79,7 +79,7 @@ function Game(props: GameProps) {
 
       return {
         fixedLetters: game.letters,
-        lastPlayed: game.lastPlayed,
+        lastPlayed: game.prevPlayed,
         scores: {
           playerOne: game.players["1"].score,
           playerTwo: game.players["2"].score,
@@ -104,7 +104,6 @@ function Game(props: GameProps) {
 
   const handleMove = useCallback(
     (move: MoveType) => {
-      console.log(move);
       switch (move.type) {
         case "place":
           if (letterOnHandMoving === null && move.from != null) {
