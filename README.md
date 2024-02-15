@@ -1,6 +1,6 @@
 <div align="center">
     <h1>Wordfeud</h1>
-    <p>An online wordfeud website where you can play wordfeud with your friends.</p>
+    <p>A website where you can play wordfeud against your friends online</p>
 </div>
 
 ![A screenshot of the game](./assets/screenshot.png)
